@@ -7,6 +7,7 @@
 #include <memory.h>
 #include <string>
 
+
 /**
     //O_CREAT           创建
     //O_EXCL            与O_CREATE并用, 文件存在则返回出错
@@ -202,5 +203,30 @@ int copy_file(const char * src, const char * dst) {
 
     close(rfd);
     close(wfd);
+    return 0;
+}
+
+int mkdir(const char* path)  {
+    char tmp[256];
+    strcpy(tmp, path);      
+
+    int len = strlen(tmp);             
+    if('/' != tmp[len-1]){
+        strcat(tmp, "/");
+        len++;
+    }
+
+    for(int i=1; i<len; i++){
+        if('/' == tmp[i]){
+            tmp[i] = '\0';
+            if(::access(tmp, F_OK) != 0){
+                if(::mkdir(tmp, 0777) == -1){
+                    perror("mkdir() failed!");
+                    return -1;
+                }
+            }
+            tmp[i] = '/';      
+        }
+    }
     return 0;
 }
