@@ -11,7 +11,8 @@ class segment{
     memfile pmem;
     static option opt;
 public:
-    segment(const char *path){
+    segment(int idx, const char *path):
+        index(idx){
         if(fexist(path)){
             pmem.load(path);
         } else {

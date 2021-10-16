@@ -82,7 +82,7 @@ public:
 
     int write(const char *data, const int len){
         memcpy(mem+offset, data, len);
-        //msync(mem+offset, len, MS_SYNC);
+        msync(mem+offset, len, MS_SYNC);
         offset += len;
         return len;
     }
