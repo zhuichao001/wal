@@ -12,7 +12,6 @@ const int SECOND_HALF = 1;
 class segment{
     int index; //start index
     std::string path;
-
     memfile pmem;
 public:
     segment(int idx, const char *fpath):
@@ -37,8 +36,8 @@ public:
         return pmem.read(idx, data, len);
     }
 
-    int append(const char *data, int len){
-        return pmem.append(data, len);
+    int restore(const char *data, int len){
+        return pmem.restore(data, len);
     }
 
     int size(){
@@ -59,7 +58,7 @@ public:
             pmem.secondhalf(index, &data, &len);
         }
         segment *seg = new segment(index, newpath);
-        seg->append(data, len);
+        seg->restore(data, len);
         return seg;
     }
 

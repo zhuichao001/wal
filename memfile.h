@@ -78,6 +78,14 @@ public:
         return 0;
     }
 
+    int restore(const char *data, int len){
+        memcpy(mem, data, len);
+        msync(mem, len, MS_SYNC);
+        offset += len;
+        return 0;
+    }
+
+
     int size(){
         return offset;
     }
@@ -91,13 +99,6 @@ public:
         memcpy(mem+offset+sizeof(int)*2, data, len);
         msync(mem+offset, len+sizeof(int)*2, MS_SYNC);
         offset += len+sizeof(int)*2;
-        return 0;
-    }
-
-    int append(const char *data, int len){
-        memcpy(mem, data, len);
-        msync(mem, len, MS_SYNC);
-        offset += len;
         return 0;
     }
 
