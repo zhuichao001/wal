@@ -6,29 +6,71 @@
 #include "fio.h"
 #include "memfile.h"
 
+const int FIRST_HALF = 0;
+const int SECOND_HALF = 1;
+
 class segment{
-    int index;
+    int index; //start index
+    std::string path;
+
     memfile pmem;
-    static option opt;
 public:
-    segment(int idx, const char *path):
-        index(idx){
-        if(fexist(path)){
-            pmem.load(path);
+    segment(int idx, const char *fpath):
+        index(idx),
+        path(fpath){
+        if(fexist(fpath)){
+            pmem.load(fpath);
+            index = pmem.firstindex();
         } else {
-            pmem.create(path);
+            pmem.create(fpath);
         }
     }
 
-    int append(const char *data, const int len){
-        return pmem.write(data, len);
+    int write(int idx, const char *data, int len){
+        if(index<0){
+            index = idx;
+        }
+        return pmem.write(idx, data, len);
     }
 
-    int full(){
-        if(pmem.size() >= opt.segmentlimit){
-            return true;
+    int read(int idx, char **data, int *len){
+        return pmem.read(idx, data, len);
+    }
+
+    int append(const char *data, int len){
+        return pmem.append(data, len);
+    }
+
+    int size(){
+        return pmem.size();
+    }
+
+    int release(){
+        ::remove(path.c_str());
+        return 0;
+    }
+
+    segment *clonehalf(const int CLONE_HALF, int index, const char *newpath){
+        char *data = nullptr;
+        int len =0;
+        if(CLONE_HALF==FIRST_HALF){ //first half
+            pmem.firsthalf(index, &data, &len);
+        }else{ //second half
+            pmem.secondhalf(index, &data, &len);
         }
-        return false;
+        segment *seg = new segment(index, newpath);
+        seg->append(data, len);
+        return seg;
+    }
+
+    int repath(const char *newpath){
+        ::rename(path.c_str(), newpath);
+        path = newpath;
+        return 0;
+    }
+
+    int startindex(){
+        return index;
     }
 };
 

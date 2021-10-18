@@ -12,6 +12,7 @@ const int MEM_FILE_LIMIT = 20971520; //20M
 class memfile{
     char *mem;
     int offset;
+    int fd;
 public:
     memfile():
         mem(nullptr),
@@ -24,7 +25,7 @@ public:
     }
 
     int create(const char *path){
-        int fd = ::open(path, O_RDWR | O_CREAT , 0664);
+        fd = ::open(path, O_RDWR | O_CREAT , 0664);
         if(fd<0) {
             fprintf(stderr, "open file error: %s\n", strerror(errno));
             close(fd);
@@ -44,7 +45,7 @@ public:
     }
 
     int load(const char *path){
-        int fd = ::open(path, O_RDWR, 0664);
+        fd = ::open(path, O_RDWR, 0664);
         if(fd<0) {
             fprintf(stderr, "open file error: %s\n", strerror(errno));
             close(fd);
@@ -80,21 +81,87 @@ public:
         return offset;
     }
 
-    int write(const char *data, const int len){
-        memcpy(mem+offset, data, len);
-        msync(mem+offset, len, MS_SYNC);
-        offset += len;
-        return len;
+    int write(int index, const char *data, int len){
+        memcpy(mem+offset, &index, sizeof(int));
+        memcpy(mem+offset+sizeof(int), &len, sizeof(int));
+        memcpy(mem+offset+sizeof(int)*2, data, len);
+        msync(mem+offset, len+2*sizeof(int)*2, MS_SYNC);
+        offset += len+sizeof(int)*2;
+        return 0;
     }
 
-    int read(int pos, char* data, int len){
-        if(pos>=offset){
+    int append(const char *data, int len){
+        memcpy(mem, data, len);
+        msync(mem, len, MS_SYNC);
+        offset += len;
+        return 0;
+    }
+
+    int read(int index, char **data, int *len){
+        int pos =0;
+        while(pos<offset){
+            if(mem[pos]<index){
+                pos += 2*sizeof(int)+mem[pos+sizeof(int)];
+            }else if(mem[pos]==index){
+                *data = mem+pos+2*sizeof(int);
+                *len = ((int*)mem)[pos+sizeof(int)];
+                return 0;
+            }else{
+                break;
+            }
+        }
+        return -1;
+    }
+
+    int firstindex(){
+        if(offset>0){
+            return *(int*)mem;
+        }else{
             return -1;
         }
-        int size = std::min(offset-pos, len);
-        memcpy(data, mem+pos, size);
-        return size;
     }
+
+    char *location(int index){
+        char *p = nullptr;
+        int pos =0;
+        while(pos<offset){
+            if(mem[pos]<index){
+                p = mem+pos;
+                pos += 2*sizeof(int)+mem[pos+sizeof(int)];
+            }else{
+                break;
+            }
+        }
+        return p;
+    }
+
+    int firsthalf(int index, char **data, int *len){
+        char *dst = location(index);
+        if(dst==nullptr){
+            return -1;
+        }
+
+        *data = mem;
+        *len = offset - (dst-mem);
+        return 0;
+    }
+
+    int secondhalf(int index, char **data, int *len){
+        char *dst = location(index);
+        if(dst==nullptr){
+            return -1;
+        }
+
+        *data = dst;
+        *len = dst - mem;
+        return 0;
+    }
+
+    int release(){
+        ::close(fd);
+        return 0;
+    }
+
 };
 
 #endif

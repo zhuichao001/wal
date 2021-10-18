@@ -4,9 +4,8 @@
 
 int main(){
     option defaultopt = {false, 20971520, 3};
-    walog wal(&defaultopt);
-    wal.open("./data/");
-    const char *s = "hello, world.";
-    //wal.append(s, strlen(s));
+    walog wal(&defaultopt, "./data/");
+    std::string s = "hello, world.";
+    wal.write(1, s);
     return 0;
 }

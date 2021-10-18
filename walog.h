@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <mutex>
 #include "fio.h"
 #include "util.h"
@@ -12,33 +13,23 @@
 class walog{
     std::mutex mux;
     std::vector<segment*> segments;
+    const option *opt;
+    const char *dirpath;
     int firstidx;
     int lastidx;
     segment *seg; //current/tail segment
     bool isclosed;
     bool iscorrupt;
 public:
-    walog(const option *opt):
+    walog(const option *p, const char *path):
+        opt(p),
+        dirpath(path),
         firstidx(1),
         lastidx(0),
         seg(nullptr),
         isclosed(false),
         iscorrupt(false) {
-    }
-
-    int open(const char *path){
-        mkdir(path);
-        std::vector<std::string> files;
-        ls(path, files);
-        if(files.size()>0){
-            return recover(files);
-        }
-
-        char compath[256];
-        sprintf(compath, "%s/%09d\0", path, 1);
-        seg = new segment(1, compath);
-        segments.push_back(seg);
-        return 0;
+        open();
     }
 
     bool firstindex(int &index){
@@ -59,16 +50,150 @@ public:
         return true;
     }
 
-    int append(const char *data, const int len){
+    int write(int index, const std::string &data){
         std::lock_guard<std::mutex> lock(mux);
         if(isclosed || iscorrupt){
             return -1;
         }
 
-        return seg->append(data, len);
+        if(index != lastidx+1){
+            fprintf(stderr, "logindex:%d not match lastidx:%d.\n", index, lastidx);
+            return -1;
+        }
+        lastidx = index;
+
+        if(data.size()+seg->size() > opt->segmentlimit){
+            cycle();
+        }
+        return seg->write(index, data.c_str(), data.size());
+    }
+
+    int read(int index, std::string &data){
+        std::lock_guard<std::mutex> lock(mux);
+        if(isclosed || iscorrupt){
+            return -1;
+        }
+
+        segment * dst = find(index);
+        if(dst=nullptr){
+            return -1;
+        }
+
+        char *body=nullptr;
+        int len=0;
+        int err = dst->read(index, &body, &len);
+        if(err<0){
+            return -1;
+        }
+        
+        data.resize(len);
+        data.assign(body, len);
+        return 0;
+    }
+
+    int truncatefront(int index){
+        if(index <=0 || lastidx==0 || index<firstidx || index>lastidx){
+            return -1; //out of range
+        }
+        if(index==firstidx){
+            return 0;
+        }
+
+        segment *dst = find(index);
+        if(dst==nullptr){
+            return -1;
+        }
+
+        char tmppath[256];
+        sprintf(tmppath, "%s/%09d.START\0", tmppath, dst->startindex());
+        segment *neo = dst->clonehalf(SECOND_HALF, index, tmppath);
+
+        for(auto it = segments.begin(); *it!=dst;){
+            (*it)->release();
+            delete *it;
+            segments.erase(it);
+        }
+
+        char newpath[256];
+        sprintf(newpath, "%s/%09d\0", newpath, dst->startindex());
+        neo->repath(newpath);
+        segments.insert(segments.begin(), neo);
+        return 0;
+    }
+
+    int truncateback(int index){
+        if(index <=0 || lastidx==0 || index<firstidx || index>lastidx){
+            return -1; //out of range
+        }
+        if(index==lastidx){
+            return 0;
+        }
+
+        segment *dst = find(index);
+        if(dst==nullptr){
+            return -1;
+        }
+
+        char tmppath[256];
+        sprintf(tmppath, "%s/%09d.END\0", tmppath, dst->startindex());
+        segment *neo = dst->clonehalf(FIRST_HALF, index, tmppath);
+
+        auto startit = std::find(segments.begin(), segments.end(), dst);
+        for(auto it = startit; it!=segments.end();){
+            (*it)->release();
+            delete *it;
+            segments.erase(it);
+        }
+
+        char newpath[256];
+        sprintf(newpath, "%s/%09d\0", newpath, dst->startindex());
+        neo->repath(newpath);
+        segments.insert(segments.begin(), neo);
+        return 0;
     }
 
 private:
+    int open(){
+        mkdir(dirpath);
+        std::vector<std::string> files;
+        ls(dirpath, files);
+        if(files.size()>0){
+            return recover(files);
+        }
+
+        char path[256];
+        sprintf(path, "%s/%09d\0", dirpath, 1);
+        seg = new segment(1, path);
+        segments.push_back(seg);
+        return 0;
+    }
+
+    // Cycle the old segment for a new segment.
+    int cycle(){
+        char path[256];
+        sprintf(path, "%s/%09d\0", dirpath, lastidx+1);
+        seg = new segment(lastidx+1, path);
+        segments.push_back(seg);
+        return 0;
+    }
+
+    segment *find(int index){
+        int i = 0;
+        int j = segments.size()-1;
+        while(i < j){
+            int m = i + (j-i)/2;
+            if(index >= segments[m]->startindex()){
+                i = m + 1;
+            }else{
+                j = m;
+            }
+        }
+        if(i==0){
+            return nullptr;
+        }
+        return segments[i-1];
+    }
+
     int recover(const std::vector<std::string> &files){
         int start = -1;
         int end = -1;
