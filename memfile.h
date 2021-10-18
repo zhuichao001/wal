@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <stdio.h>
+#include "util.h"
 
 const int MEM_FILE_LIMIT = 20971520; //20M 
 
@@ -65,7 +66,7 @@ public:
             return -1;
         }
 
-        char *mem = (char *)mmap(NULL, MEM_FILE_LIMIT, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        mem = (char *)mmap(NULL, MEM_FILE_LIMIT, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         if (mem == (char *)-1) {
             fprintf(stderr, "mmap fail\n");
             close(fd);
@@ -82,10 +83,13 @@ public:
     }
 
     int write(int index, const char *data, int len){
-        memcpy(mem+offset, &index, sizeof(int));
-        memcpy(mem+offset+sizeof(int), &len, sizeof(int));
+        char bytes[sizeof(int)];
+        pack(index, bytes);
+        memcpy(mem+offset, bytes, sizeof(int));
+        pack(len, bytes);
+        memcpy(mem+offset+sizeof(int), bytes, sizeof(int));
         memcpy(mem+offset+sizeof(int)*2, data, len);
-        msync(mem+offset, len+2*sizeof(int)*2, MS_SYNC);
+        msync(mem+offset, len+sizeof(int)*2, MS_SYNC);
         offset += len+sizeof(int)*2;
         return 0;
     }
@@ -100,11 +104,12 @@ public:
     int read(int index, char **data, int *len){
         int pos =0;
         while(pos<offset){
-            if(mem[pos]<index){
-                pos += 2*sizeof(int)+mem[pos+sizeof(int)];
-            }else if(mem[pos]==index){
-                *data = mem+pos+2*sizeof(int);
-                *len = ((int*)mem)[pos+sizeof(int)];
+            int curidx = *(int*)(mem+pos);
+            if(curidx<index){
+                pos += sizeof(int)*2 + *(int*)(mem+pos+sizeof(int));
+            }else if(curidx==index){
+                *data = mem+pos+sizeof(int)*2;
+                *len = *(int*)(mem+pos+sizeof(int));
                 return 0;
             }else{
                 break;

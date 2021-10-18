@@ -75,17 +75,15 @@ public:
         }
 
         segment * dst = find(index);
-        if(dst=nullptr){
+        if(dst==nullptr){
             return -1;
         }
 
         char *body=nullptr;
         int len=0;
-        int err = dst->read(index, &body, &len);
-        if(err<0){
+        if(dst->read(index, &body, &len)<0){
             return -1;
         }
-        
         data.resize(len);
         data.assign(body, len);
         return 0;
@@ -179,7 +177,7 @@ private:
 
     segment *find(int index){
         int i = 0;
-        int j = segments.size()-1;
+        int j = segments.size();
         while(i < j){
             int m = i + (j-i)/2;
             if(index >= segments[m]->startindex()){
