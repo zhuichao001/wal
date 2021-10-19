@@ -26,8 +26,12 @@ public:
     }
 
     int write(int idx, const char *data, int len){
-        if(index<0){
+        if(index<0){ //first record
             index = idx;
+        }
+        if(idx!=pmem.lastindex()+1){
+            fprintf(stderr, "error! idx:%d is not equal to (lastindex:%d)+1\n", idx, pmem.lastindex());
+            return -1;
         }
         return pmem.write(idx, data, len);
     }
@@ -42,6 +46,10 @@ public:
 
     int size(){
         return pmem.size();
+    }
+
+    int leftsize(){
+        return MEM_FILE_LIMIT - sizeof(int)*2 - pmem.size();
     }
 
     int release(){
@@ -70,6 +78,10 @@ public:
 
     int startindex(){
         return index;
+    }
+
+    int endindex(){
+        return pmem.lastindex();
     }
 };
 

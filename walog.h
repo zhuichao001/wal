@@ -62,7 +62,7 @@ public:
         }
         lastidx = index;
 
-        if(data.size()+seg->size() > opt->segmentlimit){
+        if(seg->leftsize() < data.size()){
             cycle();
         }
         return seg->write(index, data.c_str(), data.size());
@@ -157,13 +157,9 @@ private:
         ls(dirpath, files);
         if(files.size()>0){
             return recover(files);
+        }else{
+            return cycle(); //create a new segment
         }
-
-        char path[256];
-        sprintf(path, "%s/%09d\0", dirpath, 1);
-        seg = new segment(1, path);
-        segments.push_back(seg);
-        return 0;
     }
 
     // Cycle the old segment for a new segment.
@@ -204,6 +200,7 @@ private:
             }else if(endswith(path, ".END")){
                 end = segments.size();
                 rubbish.insert(rubbish.end(), it+1, files.end());
+                break;
             }
         }
 
@@ -221,12 +218,14 @@ private:
             ::rename(files[end].c_str(), newpath.c_str());
         }
 
-        for(auto it= start>=0?files.begin()+start:files.begin(); it < (end>=0?files.begin()+end:files.end()); ++it){
+        for(auto it= start>=0?files.begin()+start:files.begin(); it < (end>=0?files.begin()+end+1:files.end()); ++it){
             const std::string &path = (*it);
             int index = atoi(filename(path.c_str()));
             segments.push_back(new segment(index, path.c_str()));
         }
         seg = *(segments.end()-1);
+        firstidx = segments[0]->startindex();
+        lastidx = seg->endindex();
 
         return 0;
     }

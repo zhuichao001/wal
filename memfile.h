@@ -11,37 +11,41 @@
 const int MEM_FILE_LIMIT = 20971520; //20M 
 
 class memfile{
-    char *mem;
-    int offset;
     int fd;
+    char *mem;
+    int memlen;
+    int lastoffset;
 public:
     memfile():
+        fd(-1),
         mem(nullptr),
-        offset(0){
+        memlen(0),
+        lastoffset(0){
     }
 
     ~memfile(){
-        const int size = offset;
-        munmap(mem, size);
+        if(memlen>0){
+            ::munmap(mem, memlen);
+        }
     }
 
     int create(const char *path){
         fd = ::open(path, O_RDWR | O_CREAT , 0664);
         if(fd<0) {
             fprintf(stderr, "open file error: %s\n", strerror(errno));
-            close(fd);
+            ::close(fd);
             return -1;
         }
-        ftruncate(fd, MEM_FILE_LIMIT);
+        ::ftruncate(fd, MEM_FILE_LIMIT);
 
         mem = (char*)::mmap(nullptr, MEM_FILE_LIMIT, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
         if(mem == MAP_FAILED) {
             fprintf(stderr, "mmap error: %s\n", strerror(errno));
-            close(fd);
+            ::close(fd);
             return -1;
         }
 
-        close(fd);
+        ::close(fd);
         return 0;
     }
 
@@ -49,62 +53,65 @@ public:
         fd = ::open(path, O_RDWR, 0664);
         if(fd<0) {
             fprintf(stderr, "open file error: %s\n", strerror(errno));
-            close(fd);
+            ::close(fd);
             return -1;
         }
 
         struct stat sb;
         if (stat(path, &sb) < 0) {
             fprintf(stderr, "stat %s fail\n", path);
-            close(fd);
+            ::close(fd);
             return -1;
         }
 
         if(sb.st_size > MEM_FILE_LIMIT) {
-            fprintf(stderr, "size:%d is too large\n", sb.st_size);
-            close(fd);
+            fprintf(stderr, "length:%d is too large\n", sb.st_size);
+            ::close(fd);
             return -1;
         }
 
         mem = (char *)mmap(NULL, MEM_FILE_LIMIT, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
         if (mem == (char *)-1) {
             fprintf(stderr, "mmap fail\n");
-            close(fd);
+            ::close(fd);
             return -1;
         }
+        ::close(fd);
 
-        offset = sb.st_size;
-        close(fd);
+        restoremeta();
         return 0;
     }
 
     int restore(const char *data, int len){
         memcpy(mem, data, len);
         msync(mem, len, MS_SYNC);
-        offset += len;
+
+        restoremeta();
         return 0;
     }
 
 
     int size(){
-        return offset;
+        return memlen;
     }
 
     int write(int index, const char *data, int len){
         char bytes[sizeof(int)];
         pack(index, bytes);
-        memcpy(mem+offset, bytes, sizeof(int));
+        memcpy(mem+memlen, bytes, sizeof(int));
         pack(len, bytes);
-        memcpy(mem+offset+sizeof(int), bytes, sizeof(int));
-        memcpy(mem+offset+sizeof(int)*2, data, len);
-        msync(mem+offset, len+sizeof(int)*2, MS_SYNC);
-        offset += len+sizeof(int)*2;
+        memcpy(mem+memlen+sizeof(int), bytes, sizeof(int));
+        memcpy(mem+memlen+sizeof(int)*2, data, len);
+        msync(mem+memlen, len+sizeof(int)*2, MS_SYNC);
+
+        lastoffset = memlen;
+        memlen += len+sizeof(int)*2;
         return 0;
     }
 
     int read(int index, char **data, int *len){
         int pos =0;
-        while(pos<offset){
+        while(pos<memlen){
             int curidx = *(int*)(mem+pos);
             if(curidx<index){
                 pos += sizeof(int)*2 + *(int*)(mem+pos+sizeof(int));
@@ -120,17 +127,23 @@ public:
     }
 
     int firstindex(){
-        if(offset>0){
+        if(memlen>0){
             return *(int*)mem;
-        }else{
-            return -1;
         }
+        return -1;
+    }
+
+    int lastindex(){
+        if(memlen>0 && lastoffset>=0){
+            return *(int*)(mem+lastoffset);
+        }
+        return -1;
     }
 
     char *location(int index){
         char *p = nullptr;
         int pos =0;
-        while(pos<offset){
+        while(pos<memlen){
             if(mem[pos]<index){
                 p = mem+pos;
                 pos += 2*sizeof(int)+mem[pos+sizeof(int)];
@@ -148,7 +161,7 @@ public:
         }
 
         *data = mem;
-        *len = offset - (dst-mem);
+        *len = memlen - (dst-mem);
         return 0;
     }
 
@@ -165,6 +178,22 @@ public:
 
     int release(){
         ::close(fd);
+        return 0;
+    }
+
+private:
+    int restoremeta(){
+        int pos =0;
+        while(true){
+            int idx = *(int*)(mem+pos);
+            int len = *(int*)(mem+pos+sizeof(int));
+            if(len==0){
+                break;
+            }
+            lastoffset = pos;
+            pos += sizeof(int)*2 + *(int*)(mem+pos+sizeof(int));
+        }
+        memlen = pos;
         return 0;
     }
 
