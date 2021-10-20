@@ -33,7 +33,8 @@ public:
         if(idx!=pmem.lastindex()+1){
             fprintf(stderr, "error! idx:%d is not equal to (lastindex:%d)+1\n", idx, pmem.lastindex());
             return -1;
-        }*/
+        }
+        */
         return pmem.write(idx, data, len);
     }
 
@@ -50,7 +51,7 @@ public:
     }
 
     int leftsize(){
-        return MEM_FILE_LIMIT - sizeof(int)*2 - pmem.size();
+        return (MEM_FILE_LIMIT - sizeof(int)*2 - pmem.size());
     }
 
     int release(){

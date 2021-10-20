@@ -134,14 +134,14 @@ public:
         if(memlen>0){
             return *(int*)mem;
         }
-        return -1;
+        return 0;
     }
 
     int lastindex(){
         if(memlen>0 && lastoffset>=0){
             return *(int*)(mem+lastoffset);
         }
-        return -1;
+        return 0;
     }
 
     char *location(int index){

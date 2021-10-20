@@ -61,13 +61,13 @@ public:
             return -1;
         }
 
-        if(seg->leftsize() < data.size()){
+        if(seg->leftsize() < int(data.size())){
             cycle();
-            fprintf(stderr, "seg-1 stareindex:%d, endindex:%d\n", segments[0]->startindex(), segments[0]->endindex());
-            fprintf(stderr, "seg stareindex:%d, endindex:%d\n", seg->startindex(), seg->endindex());
         }
+
         seg->write(index, data.c_str(), data.size());
         lastidx = index;
+
         return 0;
     }
 
@@ -119,6 +119,8 @@ public:
         sprintf(newpath, "%s/%09d\0", newpath, dst->startindex());
         neo->repath(newpath);
         segments.insert(segments.begin(), neo);
+        firstidx = index;
+
         return 0;
     }
 

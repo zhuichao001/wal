@@ -100,7 +100,23 @@ int test4(){
     return 0;
 }
 
+int test5(){
+    option defaultopt = {20971520, 3};
+    walog wal(&defaultopt, "./data/");
+    for(int i=1; i<8000000; ++i){
+        char tmp[32];
+        sprintf(tmp, "hello, world %d\0", i);
+        wal.write(i, tmp);
+    }
+
+    wal.truncatefront(780838);
+
+    int idxs[4] = {1, 780837, 780838, 1999999};
+    readcheck(wal, idxs, 4);
+    return 0;
+}
+
 int main(){
-    test4();
+    test5();
     return 0;
 }
