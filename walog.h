@@ -93,6 +93,7 @@ public:
     }
 
     int truncatefront(int index){
+        std::lock_guard<std::mutex> lock(mux);
         if(index <=0 || lastidx==0 || index<firstidx || index>lastidx){
             return -1; //out of range
         }
@@ -106,17 +107,22 @@ public:
         }
 
         char tmppath[256];
-        sprintf(tmppath, "%s/%09d.START\0", dirpath, dst->startindex());
+        sprintf(tmppath, "%s/%09d.START", dirpath, dst->startindex());
         segment *neo = dst->clonehalf(SECOND_HALF, index, tmppath);
 
-        for(auto it = segments.begin(); *it!=dst;){
+        auto it = segments.begin();
+        do{
+            segment *cur = *it;
             (*it)->release();
             delete *it;
             segments.erase(it);
-        }
+            if(cur==dst){
+                break;
+            }
+        }while(true);
 
         char newpath[256];
-        sprintf(newpath, "%s/%09d\0", newpath, dst->startindex());
+        sprintf(newpath, "%s/%09d", dirpath, index);
         neo->repath(newpath);
         segments.insert(segments.begin(), neo);
         firstidx = index;
@@ -125,10 +131,11 @@ public:
     }
 
     int truncateback(int index){
-        if(index <=0 || lastidx==0 || index<firstidx || index>lastidx){
+        std::lock_guard<std::mutex> lock(mux);
+        if(index <=0 || lastidx==0 || index<firstidx || index>lastidx+1){
             return -1; //out of range
         }
-        if(index==lastidx){
+        if(index==lastidx+1){
             return 0;
         }
 
@@ -143,7 +150,7 @@ public:
         segment *neo = dst->clonehalf(FIRST_HALF, index, tmppath);
 
         char newpath[256];
-        sprintf(newpath, "%s/%09d\0", newpath, dst->startindex());
+        sprintf(newpath, "%s/%09d\0", dirpath, dst->startindex());
 
         fprintf(stderr, "neo's startindex:%d, endindex:%d\n", neo->startindex(), neo->endindex());
 
