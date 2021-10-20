@@ -124,9 +124,9 @@ public:
         char newpath[256];
         sprintf(newpath, "%s/%09d", dirpath, index);
         neo->repath(newpath);
+
         segments.insert(segments.begin(), neo);
         firstidx = index;
-
         return 0;
     }
 
@@ -143,16 +143,12 @@ public:
         if(dst==nullptr){
             return -1;
         }
-        fprintf(stderr, "dst's startindex:%d, endindex:%d\n", dst->startindex(), dst->endindex());
+
+        int startidx = dst->startindex();
 
         char tmppath[256];
-        sprintf(tmppath, "%s/%09d.END\0", dirpath, dst->startindex());
+        sprintf(tmppath, "%s/%09d.END", dirpath, startidx);
         segment *neo = dst->clonehalf(FIRST_HALF, index, tmppath);
-
-        char newpath[256];
-        sprintf(newpath, "%s/%09d\0", dirpath, dst->startindex());
-
-        fprintf(stderr, "neo's startindex:%d, endindex:%d\n", neo->startindex(), neo->endindex());
 
         auto startit = std::find(segments.begin(), segments.end(), dst);
         for(auto it = startit; it!=segments.end();){
@@ -161,10 +157,12 @@ public:
             segments.erase(it);
         }
 
+        char newpath[256];
+        sprintf(newpath, "%s/%09d", dirpath, startidx);
         neo->repath(newpath);
+
         segments.insert(segments.end(), neo);
-        lastidx = neo->endindex();
-        fprintf(stderr, "lastindex:%d\n", lastidx);
+        lastidx = index-1;
         return 0;
     }
 
@@ -182,9 +180,10 @@ private:
 
     // Cycle the old segment for a new segment.
     int cycle(){
+        int nextidx = lastidx+1;
         char path[256];
-        sprintf(path, "%s/%09d\0", dirpath, lastidx+1);
-        seg = new segment(path);
+        sprintf(path, "%s/%09d", dirpath, nextidx);
+        seg = new segment(nextidx, path);
         segments.push_back(seg);
         return 0;
     }
@@ -239,7 +238,7 @@ private:
         for(auto it= start>=0?files.begin()+start:files.begin(); it < (end>=0?files.begin()+end+1:files.end()); ++it){
             const std::string &path = (*it);
             int index = atoi(filename(path.c_str()));
-            segments.push_back(new segment(path.c_str()));
+            segments.push_back(new segment(index, path.c_str()));
         }
         seg = *(segments.end()-1);
         firstidx = segments[0]->startindex();

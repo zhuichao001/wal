@@ -10,10 +10,12 @@ const int FIRST_HALF = 0;
 const int SECOND_HALF = 1;
 
 class segment{
+    int index; //start index
     std::string path;
     memfile pmem;
 public:
-    segment(const char *fpath):
+    segment(int idx, const char *fpath):
+        index(idx),
         path(fpath){
         if(fexist(fpath)){
             pmem.load(fpath);
@@ -22,7 +24,8 @@ public:
         }
     }
 
-    segment(const char *fpath, const char *data, int len):
+    segment(int idx, const char *fpath, const char *data, int len):
+        index(idx),
         path(fpath){
         pmem.create(fpath);
         pmem.restore(data, len);
@@ -59,15 +62,17 @@ public:
         return 0;
     }
 
-    segment *clonehalf(const int CLONE_HALF, int index, const char *newpath){
+    segment *clonehalf(const int CLONE_HALF, int idx, const char *newpath){
+        segment *seg = nullptr;
         char *data = nullptr;
         int len =0;
         if(CLONE_HALF==FIRST_HALF){ //first half
-            pmem.firsthalf(index, &data, &len);
+            pmem.firsthalf(idx, &data, &len);
+            seg = new segment(index, newpath, data, len);
         }else{ //second half
-            pmem.secondhalf(index, &data, &len);
+            pmem.secondhalf(idx, &data, &len);
+            seg = new segment(idx, newpath, data, len);
         }
-        segment *seg = new segment(newpath, data, len);
         return seg;
     }
 
@@ -78,7 +83,7 @@ public:
     }
 
     int startindex(){
-        return pmem.firstindex();
+        return index;
     }
 
     int endindex(){

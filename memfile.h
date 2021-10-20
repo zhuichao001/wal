@@ -83,8 +83,10 @@ public:
     }
 
     int restore(const char *data, int len){
-        memcpy(mem, data, len);
-        msync(mem, len, MS_SYNC);
+        if(data!=nullptr && len>0){
+            memcpy(mem, data, len);
+            msync(mem, len, MS_SYNC);
+        }
 
         restoremeta();
         return 0;

@@ -93,9 +93,9 @@ int test4(){
         wal.write(i, tmp);
     }
 
-    wal.truncateback(780840);
+    wal.truncateback(780838);
 
-    int idxs[4] = {1, 2, 780839, 780840};
+    int idxs[4] = {1, 780837, 780838, 780839};
     readcheck(wal, idxs, 4);
     return 0;
 }
@@ -109,9 +109,9 @@ int test5(){
         wal.write(i, tmp);
     }
 
-    wal.truncatefront(780838);
+    wal.truncatefront(780837);
 
-    int idxs[4] = {1, 780837, 780838, 1999999};
+    int idxs[4] = {1, 780836, 780837, 780838};
     readcheck(wal, idxs, 4);
     return 0;
 }
