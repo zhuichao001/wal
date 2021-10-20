@@ -196,7 +196,7 @@ private:
         if(i==0){
             return nullptr;
         }
-        return segments[i-1];
+        return i==0 ? nullptr : segments[i-1];
     }
 
     int recover(const std::vector<std::string> &files){
