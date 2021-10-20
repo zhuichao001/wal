@@ -2,6 +2,26 @@
 #include <string.h>
 #include "walog.h"
 
+int readcheck(walog &wal, int *idxs,  int size){
+    for(int i=0; i<size; ++i){
+        int idx = idxs[i];
+        char tmp[32];
+        sprintf(tmp, "hello, world %d\0", idx);
+
+        std::string data;
+        if(wal.read(idx, data)<0){
+            printf("read %d failed, not exist\n", idx);
+            continue;
+        }
+
+        if(strcmp(tmp, data.c_str())!=0){
+            printf("not match, expect:%s, data:%s\n", tmp, data.c_str());
+        }
+        printf("yes match, expect:%s, data:%s\n", tmp, data.c_str());
+    }
+    return 0;
+}
+
 int test0(){
     option defaultopt = {20971520, 3};
     walog wal(&defaultopt, "./data/");
@@ -44,26 +64,12 @@ int test2(){
     walog wal(&defaultopt, "./data/");
     for(int i=1; i<1000000; ++i){
         char tmp[32];
-        sprintf(tmp, "hello, world %d\n\0", i);
+        sprintf(tmp, "hello, world %d\0", i);
         wal.write(i, tmp);
     }
 
     int idxs[4] = {1, 2, 888888, 999999};
-
-    for(int i=0; i<4; ++i){
-        int idx = idxs[i];
-        char tmp[32];
-        sprintf(tmp, "hello, world %d\n\0", idx);
-
-        std::string data;
-        wal.read(idx, data);
-
-        if(strcmp(tmp, data.c_str())!=0){
-            printf("not match, expect:%s, data:%s\n", tmp, data.c_str());
-            break;
-        }
-        printf("yes match, expect:%s, data:%s\n", tmp, data.c_str());
-    }
+    readcheck(wal, idxs, 4);
     return 0;
 }
 
@@ -79,6 +85,18 @@ int test3(){
 }
 
 int test4(){
+    option defaultopt = {20971520, 3};
+    walog wal(&defaultopt, "./data/");
+    for(int i=1; i<1000000; ++i){
+        char tmp[32];
+        sprintf(tmp, "hello, world %d\0", i);
+        wal.write(i, tmp);
+    }
+
+    wal.truncateback(780840);
+
+    int idxs[4] = {1, 2, 780839, 780840};
+    readcheck(wal, idxs, 4);
     return 0;
 }
 

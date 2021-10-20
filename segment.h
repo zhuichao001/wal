@@ -10,29 +10,30 @@ const int FIRST_HALF = 0;
 const int SECOND_HALF = 1;
 
 class segment{
-    int index; //start index
     std::string path;
     memfile pmem;
 public:
-    segment(int idx, const char *fpath):
-        index(idx),
+    segment(const char *fpath):
         path(fpath){
         if(fexist(fpath)){
             pmem.load(fpath);
-            index = pmem.firstindex();
         } else {
             pmem.create(fpath);
         }
     }
 
+    segment(const char *fpath, const char *data, int len):
+        path(fpath){
+        pmem.create(fpath);
+        pmem.restore(data, len);
+    }
+
     int write(int idx, const char *data, int len){
-        if(index<0){ //first record
-            index = idx;
-        }
+        /*
         if(idx!=pmem.lastindex()+1){
             fprintf(stderr, "error! idx:%d is not equal to (lastindex:%d)+1\n", idx, pmem.lastindex());
             return -1;
-        }
+        }*/
         return pmem.write(idx, data, len);
     }
 
@@ -65,8 +66,7 @@ public:
         }else{ //second half
             pmem.secondhalf(index, &data, &len);
         }
-        segment *seg = new segment(index, newpath);
-        seg->restore(data, len);
+        segment *seg = new segment(newpath, data, len);
         return seg;
     }
 
@@ -77,7 +77,7 @@ public:
     }
 
     int startindex(){
-        return index;
+        return pmem.firstindex();
     }
 
     int endindex(){

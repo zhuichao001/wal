@@ -96,6 +96,11 @@ public:
     }
 
     int write(int index, const char *data, int len){
+        if(data==nullptr||len==0){
+            return -1;
+        }
+        lastoffset = memlen;
+
         char bytes[sizeof(int)];
         pack(index, bytes);
         memcpy(mem+memlen, bytes, sizeof(int));
@@ -104,8 +109,7 @@ public:
         memcpy(mem+memlen+sizeof(int)*2, data, len);
         msync(mem+memlen, len+sizeof(int)*2, MS_SYNC);
 
-        lastoffset = memlen;
-        memlen += len+sizeof(int)*2;
+        memlen += sizeof(int)*2+len;
         return 0;
     }
 
@@ -141,17 +145,17 @@ public:
     }
 
     char *location(int index){
-        char *p = nullptr;
         int pos =0;
         while(pos<memlen){
-            if(mem[pos]<index){
-                p = mem+pos;
-                pos += 2*sizeof(int)+mem[pos+sizeof(int)];
+            int idx = *(int*)(mem+pos);
+            int len = *(int*)(mem+pos+sizeof(int));
+            if(idx<index){
+                pos += 2*sizeof(int)+len;
             }else{
-                break;
+                return mem+pos;
             }
         }
-        return p;
+        return nullptr;
     }
 
     int firsthalf(int index, char **data, int *len){
@@ -161,7 +165,7 @@ public:
         }
 
         *data = mem;
-        *len = memlen - (dst-mem);
+        *len = dst - mem;
         return 0;
     }
 
@@ -172,7 +176,7 @@ public:
         }
 
         *data = dst;
-        *len = dst - mem;
+        *len = memlen - (dst-mem);
         return 0;
     }
 
@@ -184,14 +188,13 @@ public:
 private:
     int restoremeta(){
         int pos =0;
-        while(true){
-            int idx = *(int*)(mem+pos);
+        while(pos<MEM_FILE_LIMIT){
             int len = *(int*)(mem+pos+sizeof(int));
             if(len==0){
                 break;
             }
             lastoffset = pos;
-            pos += sizeof(int)*2 + *(int*)(mem+pos+sizeof(int));
+            pos += sizeof(int)*2 + len;
         }
         memlen = pos;
         return 0;

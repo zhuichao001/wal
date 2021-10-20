@@ -60,12 +60,15 @@ public:
             fprintf(stderr, "logindex:%d not match lastidx:%d.\n", index, lastidx);
             return -1;
         }
-        lastidx = index;
 
         if(seg->leftsize() < data.size()){
             cycle();
+            fprintf(stderr, "seg-1 stareindex:%d, endindex:%d\n", segments[0]->startindex(), segments[0]->endindex());
+            fprintf(stderr, "seg stareindex:%d, endindex:%d\n", seg->startindex(), seg->endindex());
         }
-        return seg->write(index, data.c_str(), data.size());
+        seg->write(index, data.c_str(), data.size());
+        lastidx = index;
+        return 0;
     }
 
     int read(int index, std::string &data){
@@ -103,7 +106,7 @@ public:
         }
 
         char tmppath[256];
-        sprintf(tmppath, "%s/%09d.START\0", tmppath, dst->startindex());
+        sprintf(tmppath, "%s/%09d.START\0", dirpath, dst->startindex());
         segment *neo = dst->clonehalf(SECOND_HALF, index, tmppath);
 
         for(auto it = segments.begin(); *it!=dst;){
@@ -131,10 +134,16 @@ public:
         if(dst==nullptr){
             return -1;
         }
+        fprintf(stderr, "dst's startindex:%d, endindex:%d\n", dst->startindex(), dst->endindex());
 
         char tmppath[256];
-        sprintf(tmppath, "%s/%09d.END\0", tmppath, dst->startindex());
+        sprintf(tmppath, "%s/%09d.END\0", dirpath, dst->startindex());
         segment *neo = dst->clonehalf(FIRST_HALF, index, tmppath);
+
+        char newpath[256];
+        sprintf(newpath, "%s/%09d\0", newpath, dst->startindex());
+
+        fprintf(stderr, "neo's startindex:%d, endindex:%d\n", neo->startindex(), neo->endindex());
 
         auto startit = std::find(segments.begin(), segments.end(), dst);
         for(auto it = startit; it!=segments.end();){
@@ -143,10 +152,10 @@ public:
             segments.erase(it);
         }
 
-        char newpath[256];
-        sprintf(newpath, "%s/%09d\0", newpath, dst->startindex());
         neo->repath(newpath);
-        segments.insert(segments.begin(), neo);
+        segments.insert(segments.end(), neo);
+        lastidx = neo->endindex();
+        fprintf(stderr, "lastindex:%d\n", lastidx);
         return 0;
     }
 
@@ -166,7 +175,7 @@ private:
     int cycle(){
         char path[256];
         sprintf(path, "%s/%09d\0", dirpath, lastidx+1);
-        seg = new segment(lastidx+1, path);
+        seg = new segment(path);
         segments.push_back(seg);
         return 0;
     }
@@ -221,7 +230,7 @@ private:
         for(auto it= start>=0?files.begin()+start:files.begin(); it < (end>=0?files.begin()+end+1:files.end()); ++it){
             const std::string &path = (*it);
             int index = atoi(filename(path.c_str()));
-            segments.push_back(new segment(index, path.c_str()));
+            segments.push_back(new segment(path.c_str()));
         }
         seg = *(segments.end()-1);
         firstidx = segments[0]->startindex();
