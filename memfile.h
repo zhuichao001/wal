@@ -101,16 +101,13 @@ public:
         if(data==nullptr||len==0){
             return -1;
         }
-        lastoffset = memlen;
 
-        char bytes[sizeof(int)];
-        pack(index, bytes);
-        memcpy(mem+memlen, bytes, sizeof(int));
-        pack(len, bytes);
-        memcpy(mem+memlen+sizeof(int), bytes, sizeof(int));
+        memcpy(mem+memlen, &index, sizeof(int));
+        memcpy(mem+memlen+sizeof(int), &len, sizeof(int));
         memcpy(mem+memlen+sizeof(int)*2, data, len);
         msync(mem+memlen, len+sizeof(int)*2, MS_SYNC);
 
+        lastoffset = memlen;
         memlen += sizeof(int)*2+len;
         return 0;
     }
