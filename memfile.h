@@ -6,6 +6,8 @@
 #include <sys/stat.h>
 #include <sys/mman.h>
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
 #include "util.h"
 
 const int MEM_FILE_LIMIT = 20971520; //20M 
