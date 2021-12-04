@@ -35,7 +35,7 @@
 
 int fsize(const int fd) {
     struct stat st;
-    if(fstat(fd, &st)==0){
+    if(::fstat(fd, &st)==0){
         return st.st_size;
     }
     printf("failed fstate errno:%d\n", errno);
@@ -43,21 +43,21 @@ int fsize(const int fd) {
 }
 
 bool fexist(const char *path) {
-    if (access(path, F_OK) == 0) {
+    if (::access(path, F_OK) == 0) {
         return true;
     }
     return false;
 }
 
 bool fwriteable(const char *path) {
-    if (access(path, W_OK) == 0) {
+    if (::access(path, W_OK) == 0) {
         return true;
     }
     return false;
 }
 
 bool seekable(const int fd){
-    if(lseek(fd, 0, SEEK_CUR)==-1){
+    if(::lseek(fd, 0, SEEK_CUR)==-1){
         return false;
     }
     return true;
@@ -65,7 +65,7 @@ bool seekable(const int fd){
 
 int open_create(const char *path) {
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
-    int fd = open(path, O_RDWR | O_CREAT | O_TRUNC, mode);
+    int fd = ::open(path, O_RDWR | O_CREAT | O_TRUNC, mode);
     if (fd == -1) {
         printf("failed open or create file:%s, errno:%d\n", path, errno);
         return -1;
@@ -75,7 +75,7 @@ int open_create(const char *path) {
 
 int open_append(const char* path) {
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
-    int fd = open(path, O_RDWR | O_APPEND, mode);
+    int fd = ::open(path, O_RDWR | O_APPEND, mode);
     if (fd == -1) {
         printf("failed open appending file:%s, errno:%d\n", path, errno);
         return -1;
@@ -84,7 +84,7 @@ int open_append(const char* path) {
 } 
 int open_read(const char* path) {
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
-    int fd = open(path, O_RDONLY, mode);
+    int fd = ::open(path, O_RDONLY, mode);
     if (fd == -1) {
         printf("failed open reading file:%s, errno:%d\n", path, errno);
         return -1;
@@ -101,7 +101,7 @@ int create(const char* path) {
     return fd;
 }
 
-int read_file(const int fd, std::string &data) {
+int readfrom(const int fd, std::string &data) {
     if(fd<0){
         return -1;
     }
@@ -129,7 +129,7 @@ int read_file(const int fd, std::string &data) {
     return 0;
 }
 
-int write_file(const int fd, const std::string &data) {
+int writeto(const int fd, const std::string &data) {
     if(fd<0){
         return -1;
     }
@@ -152,62 +152,38 @@ int write_file(const int fd, const std::string &data) {
     return 0;
 }
 
-int append_file(const int fd, const std::string &data) {
-    if(fd<0){
-        return -1;
-    }
-
-    const char *buf = data.c_str();
-    int length = data.size();
-    int n;
-    while (length>0 && (n = write(fd, buf, data.size()))!=0) {
-        if (n == -1) {
-            if (errno == EINTR){
-                continue;
-            }
-            close(fd);
-            return -1;
-        } 
-        buf += n;
-        length -=n;
-        fprintf(stderr, "n:%d\n",n);
-    }
-    close(fd);
-    return 0;
-}
-
-int copy_file(const char * src, const char * dst) {
-    int rfd = open_read(src);
-    int wfd = open_create(dst);
+int copyfile(const char * src_path, const char * dst_path) {
+    int rfd = open_read(src_path);
+    int wfd = open_create(dst_path);
     if(rfd<0 || wfd<0){
         return -1;
     }
 
     char buf[4096];
     int n;
-    while ((n = read(rfd, buf, 4096))!=0) {
+    while ((n = ::read(rfd, buf, 4096))!=0) {
         if (n == -1) {
             if (errno == EINTR){
                 continue;
             }
 
             printf("copy reading failed\n");
-            close(rfd);
-            close(wfd);
+            ::close(rfd);
+            ::close(wfd);
             return -1;
         } 
 
-        ssize_t bytes = write(wfd, buf, n);
+        ssize_t bytes = ::write(wfd, buf, n);
         if (bytes == -1) {
             printf("copy writing failed\n");
-            close(rfd);
-            close(wfd);
+            ::close(rfd);
+            ::close(wfd);
             return -1;
         }
     }
 
-    close(rfd);
-    close(wfd);
+    ::close(rfd);
+    ::close(wfd);
     return 0;
 }
 
