@@ -24,7 +24,7 @@ int readcheck(walog &wal, int *idxs,  int size){
 
 int test0(){
     option defaultopt = {20971520, 3};
-    walog wal(&defaultopt, "./data/");
+    walog wal(defaultopt, "./data/");
     wal.write(1, "hello, world 1");
     wal.write(2, "hello, world 2");
     wal.write(3, "hello, world 3");
@@ -37,7 +37,7 @@ int test0(){
 
 int test1(){
     option defaultopt = {20971520, 3};
-    walog wal(&defaultopt, "./data/");
+    walog wal(defaultopt, "./data/");
     for(int i=1; i<1000000; ++i){
         char tmp[32];
         sprintf(tmp, "hello, world %d\0", i);
@@ -61,7 +61,7 @@ int test1(){
 
 int test2(){
     option defaultopt = {20971520, 3};
-    walog wal(&defaultopt, "./data/");
+    walog wal(defaultopt, "./data/");
     for(int i=1; i<1000000; ++i){
         char tmp[32];
         sprintf(tmp, "hello, world %d\0", i);
@@ -75,7 +75,7 @@ int test2(){
 
 int test3(){
     option defaultopt = {20971520, 3};
-    walog wal(&defaultopt, "./data/");
+    walog wal(defaultopt, "./data/");
     for(int i=1; i<1000000; ++i){
         char tmp[32];
         sprintf(tmp, "hello, world %d\0", i);
@@ -86,7 +86,7 @@ int test3(){
 
 int test4(){
     option defaultopt = {20971520, 3};
-    walog wal(&defaultopt, "./data/");
+    walog wal(defaultopt, "./data/");
     for(int i=1; i<1000000; ++i){
         char tmp[32];
         sprintf(tmp, "hello, world %d\0", i);
@@ -102,7 +102,7 @@ int test4(){
 
 int test5(){
     option defaultopt = {20971520, 3};
-    walog wal(&defaultopt, "./data/");
+    walog wal(defaultopt, "./data/");
     for(int i=1; i<8000000; ++i){
         char tmp[32];
         sprintf(tmp, "hello, world %d\0", i);

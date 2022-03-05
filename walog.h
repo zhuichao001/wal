@@ -13,15 +13,15 @@
 class walog{
     std::mutex mux;
     std::vector<segment*> segments;
-    const option *opt;
-    const char *dirpath;
+    const option opt;
+    const std::string dirpath;
     int firstidx;
     int lastidx;
     segment *seg; //current/tail segment
     bool isclosed;
     bool iscorrupt;
 public:
-    walog(const option *p, const char *path):
+    walog(const option p, const char *path):
         opt(p),
         dirpath(path),
         firstidx(1),
@@ -107,7 +107,7 @@ public:
         }
 
         char tmppath[256];
-        sprintf(tmppath, "%s/%09d.START", dirpath, dst->startindex());
+        sprintf(tmppath, "%s/%09d.START", dirpath.c_str(), dst->startindex());
         segment *neo = dst->clonehalf(SECOND_HALF, index, tmppath);
 
         auto it = segments.begin();
@@ -122,7 +122,7 @@ public:
         }while(true);
 
         char newpath[256];
-        sprintf(newpath, "%s/%09d", dirpath, index);
+        sprintf(newpath, "%s/%09d", dirpath.c_str(), index);
         neo->repath(newpath);
 
         segments.insert(segments.begin(), neo);
@@ -147,7 +147,7 @@ public:
         int startidx = dst->startindex();
 
         char tmppath[256];
-        sprintf(tmppath, "%s/%09d.END", dirpath, startidx);
+        sprintf(tmppath, "%s/%09d.END", dirpath.c_str(), startidx);
         segment *neo = dst->clonehalf(FIRST_HALF, index, tmppath);
 
         auto startit = std::find(segments.begin(), segments.end(), dst);
@@ -158,7 +158,7 @@ public:
         }
 
         char newpath[256];
-        sprintf(newpath, "%s/%09d", dirpath, startidx);
+        sprintf(newpath, "%s/%09d", dirpath.c_str(), startidx);
         neo->repath(newpath);
 
         segments.insert(segments.end(), neo);
@@ -168,9 +168,9 @@ public:
 
 private:
     int open(){
-        mkdir(dirpath);
+        mkdir(dirpath.c_str());
         std::vector<std::string> files;
-        ls(dirpath, files);
+        ls(dirpath.c_str(), files);
         if(files.size()>0){
             return recover(files);
         }else{
@@ -182,7 +182,7 @@ private:
     int cycle(){
         int nextidx = lastidx+1;
         char path[256];
-        sprintf(path, "%s/%09d", dirpath, nextidx);
+        sprintf(path, "%s/%09d", dirpath.c_str(), nextidx);
         seg = new segment(nextidx, path);
         segments.push_back(seg);
         return 0;

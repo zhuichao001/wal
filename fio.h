@@ -82,6 +82,7 @@ int open_append(const char* path) {
     }
     return fd;
 } 
+
 int open_read(const char* path) {
     mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
     int fd = ::open(path, O_RDONLY, mode);
