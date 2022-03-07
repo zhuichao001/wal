@@ -18,7 +18,7 @@ public:
     segment(int idx, const char *fpath):
         index(idx),
         path(fpath){
-        if(fexist(fpath)){
+        if(exist(fpath)){
             pmem.load(fpath);
         } else {
             pmem.create(fpath);
