@@ -10,6 +10,8 @@
 #include <errno.h>
 #include "util.h"
 
+namespace wal{
+
 const int MEM_FILE_LIMIT = 20971520; //20M 
 
 class memfile{
@@ -202,5 +204,7 @@ private:
     }
 
 };
+
+} //end of namespace wal
 
 #endif

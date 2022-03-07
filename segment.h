@@ -1,10 +1,11 @@
 #ifndef _WAL_SEGMENT_H_
-#define _WRITE_AHEAD_LOG_H_
+#define _WAL_SEGMENT_H_
 
 #include <string>
-#include "option.h"
 #include "fio.h"
 #include "memfile.h"
+
+namespace wal{
 
 const int FIRST_HALF = 0;
 const int SECOND_HALF = 1;
@@ -90,5 +91,7 @@ public:
         return pmem.lastindex();
     }
 };
+
+} //end of namepsace wal
 
 #endif

@@ -9,6 +9,12 @@
 #include "util.h"
 #include "segment.h"
 
+namespace wal{
+
+typedef struct{
+    int segmentlimit;   //the upper limit of segment
+    int cachednum;      //cached segments in memory
+}option;
 
 class walog{
     std::mutex mux;
@@ -248,5 +254,7 @@ private:
     }
 
 };
+
+} //end of namespace wal
 
 #endif
