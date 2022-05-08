@@ -174,9 +174,9 @@ public:
 
 private:
     int open(){
-        mkdir(dirpath.c_str());
+        fio::mkdir(dirpath.c_str());
         std::vector<std::string> files;
-        ls(dirpath.c_str(), files);
+        fio::flist(dirpath.c_str(), files);
         if(files.size()>0){
             return recover(files);
         }else{
